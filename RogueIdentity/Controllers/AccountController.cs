@@ -102,7 +102,7 @@ namespace RogueIdentity.Controllers
                 return NotFound();
             }
             var logMeIn = await new AuthUserService().LoginAsync(model);
-            return logMeIn;
+            return logMeIn; //
             #region refactor 
             //var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
 
