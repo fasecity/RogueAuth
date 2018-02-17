@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using RogueIdentity.ApiDbContext;
 using RogueIdentity.Models;
+using RogueIdentity.UserBox.UserServices;
 
 namespace RogueIdentity.Controllers
 {
@@ -18,47 +20,76 @@ namespace RogueIdentity.Controllers
     [Route("api/Account")]
     public class AccountController : Controller
     {
+    
+        //private readonly SignInManager<IdentityUser> _signInManager;
+        //private readonly UserManager<IdentityUser> _userManager;
+        //private readonly IConfiguration _configuration;
+        //private readonly ApplicationDbContext _db;
 
-        private readonly SignInManager<IdentityUser> _signInManager;
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly IConfiguration _configuration;
-
-        public AccountController(
-            UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager,
-            IConfiguration configuration
-            )
-        {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _configuration = configuration;
-        }
+        //public AccountController(
+        //    UserManager<IdentityUser> userManager,
+        //    SignInManager<IdentityUser> signInManager,
+        //    IConfiguration configuration,
+        //    ApplicationDbContext db
+        //    )
+        //{
+        //    _userManager = userManager;
+        //    _signInManager = signInManager;
+        //    _configuration = configuration;
+        //    _db = db;
+        //}
 
         ////----------------Test Register-------------------///
 
         //[HttpGet("make")]
-        //public async Task<object> MakeUser()
+        //public async Task<IActionResult> MakeUser()
         //{
         //    RegisterDto model = new RegisterDto();
-        //     model.Email = "test3@mail.com";
+        //    model.Email = "Mo2@mail.com";
         //    model.Password = "Au_123456@1!";
 
         //    var user = new IdentityUser
         //    {
         //        UserName = model.Email,
-        //        Email = model.Email
+        //        Email = model.Email,
+
+        //        //tests
+        //        PhoneNumber = "14165556667",
+        //        NormalizedUserName = "Moe",
+                
+                
+                
         //    };
         //    var result = await _userManager.CreateAsync(user, model.Password);
 
         //    if (result.Succeeded)
         //    {
         //        await _signInManager.SignInAsync(user, false);
-        //        return await GenerateJwtToken(model.Email, user);
+        //        //add claims test
+        //        await _userManager.AddClaimAsync(user, new Claim(ClaimTypes.Email, model.Email));
+        //        //await _userManager.AddClaimAsync(user, new Claim(ClaimTypes.GivenName, "Moe"));
+        //        //await _userManager.AddClaimAsync(user, new Claim(ClaimTypes.MobilePhone,user.PhoneNumber));
+
+
+        //        return Ok(await GenerateJwtToken(model.Email, user));
         //    }
 
         //    throw new ApplicationException("UNKNOWN_ERROR");
+
+
+       
+        //}
+        //login test:
+        ////get claims
+        //var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
+
+        //if (result.Succeeded)
+        //{
+        //    var appUser = _userManager.Users.SingleOrDefault(r => r.Email == model.Email);
+        //    return Ok( await GenerateJwtToken(model.Email, appUser));
         //}
 
+        //throw new ApplicationException("INVALID_LOGIN_ATTEMPT");
         //----------------------------------------------//
 
 
@@ -66,72 +97,64 @@ namespace RogueIdentity.Controllers
         [HttpPost("login")]
         public async Task<object> Login([FromBody] LoginDto model)
         {
-            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
-
-            if (result.Succeeded)
+            if (!ModelState.IsValid)
             {
-                var appUser = _userManager.Users.SingleOrDefault(r => r.Email == model.Email);
-                return await GenerateJwtToken(model.Email, appUser);
+                return NotFound();
             }
+            var logMeIn = await new AuthUserService().LoginAsync(model);
+            return logMeIn;
+            #region refactor 
+            //var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
 
-            throw new ApplicationException("INVALID_LOGIN_ATTEMPT");
+            //if (result.Succeeded)
+            //{
+            //    var appUser = _userManager.Users.SingleOrDefault(r => r.Email == model.Email);
+            //    return await GenerateJwtToken(model.Email, appUser);
+            //}
+
+            //throw new ApplicationException("INVALID_LOGIN_ATTEMPT");
+            #endregion
         }
 
         // [HttpPost]
         [HttpPost("register")]
         public async Task<object> Register([FromBody] RegisterDto model)
         {
-            
-            var user = new IdentityUser
-            {
-                UserName = model.Email,
-                Email = model.Email
-            };
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var RegisterMe = await new AuthUserService().RegisterAsync(model);
+            return RegisterMe;
 
-            if (result.Succeeded)
-            {
-                await _signInManager.SignInAsync(user, false);
-                return await GenerateJwtToken(model.Email, user);
-            }
+            #region refactor 
+            //var user = new IdentityUser
+            //{
+            //    UserName = model.Email,
+            //    Email = model.Email
+            //};
+            //var result = await _userManager.CreateAsync(user, model.Password);
 
-            throw new ApplicationException("UNKNOWN_ERROR");
+            //if (result.Succeeded)
+            //{
+            //    await _signInManager.SignInAsync(user, false);
+            //    return await GenerateJwtToken(model.Email, user);
+            //}
+            #endregion
+
+
+
         }
 
 
 
 
-        ////--------------testing Dev // 
-        //                ValidIssuer = " http://localhost:51237/",
-        //                ValidAudience = " http://localhost:51237/",
-        //                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("Dont put here")),
-    private async Task<object> GenerateJwtToken(string email, IdentityUser user)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id)
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("Dont put here this is my custom Secret key for authnetication"));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.Now.AddDays(Convert.ToDouble(30));
-
-            var token = new JwtSecurityToken(
-                _configuration["http://localhost:51237/"],
-                _configuration["http://localhost:51237/"],
-                claims,
-                expires: expires,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+       
+  
     }
 }
 
 //prod use config 
+////--------------testing Dev // 
+//                ValidIssuer = " http://localhost:51237/",
+//                ValidAudience = " http://localhost:51237/",
+//                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("Dont put here")),
 //private async Task<object> GenerateJwtToken(string email, IdentityUser user)
 //{
 //    var claims = new List<Claim>

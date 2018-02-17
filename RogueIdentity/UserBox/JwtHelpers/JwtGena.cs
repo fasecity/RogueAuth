@@ -20,7 +20,7 @@ namespace RogueIdentity.JwtHelpers
 
         private  async Task<object> GenaJwtToken(string email, IdentityUser user)
         {
-            var claims = new List<Claim>
+            var claims =  new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -30,7 +30,7 @@ namespace RogueIdentity.JwtHelpers
 
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtKey"]));
+            var key =  new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.Now.AddDays(Convert.ToDouble(_configuration["JwtExpireDays"]));
 
